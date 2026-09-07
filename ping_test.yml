@@ -1,0 +1,6 @@
+---
+- name: Ping test
+  hosts: "{{ TARGET_HOST | default(PING_CHECK_TARGET_HOSTS) }}"
+  gather_facts: false
+  roles:
+    - role: ping_check
