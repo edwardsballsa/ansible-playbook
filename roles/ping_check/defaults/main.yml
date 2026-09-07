@@ -1,0 +1,3 @@
+---
+# Default variables for the ping_check role
+ping_check_target_hosts: "all"
