@@ -1,0 +1,19 @@
+---
+- name: Bring the network interface up
+  ansible.builtin.shell: "ip link set {{ target_interface }} up"
+  register: enable_result
+  changed_when: true
+  failed_when: enable_result.rc != 0
+
+- name: Verify if the interface is now UP
+  ansible.builtin.shell: "ip link show {{ target_interface }}"
+  register: verify_result
+  changed_when: false
+  failed_when: verify_result.rc != 0
+
+- name: Assert interface status is UP
+  ansible.builtin.assert:
+    that:
+      - "'UP' in verify_result.stdout"
+    fail_msg: "Failed to bring network interface '{{ target_interface }}' UP."
+    success_msg: "Network interface '{{ target_interface }}' has been successfully enabled and is UP."
