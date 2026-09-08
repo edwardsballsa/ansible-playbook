@@ -1,0 +1,25 @@
+---
+- hosts: wifi-routing.asl04233.asllab
+  become: true
+  vars:
+    target_interface: "wks16"
+    TARGET_DNS_IP: "8.8.8.8"
+
+  tasks:
+    - name: 1. Check interface status
+      ansible.builtin.include_role:
+        name: check_interface
+
+    - name: 2. Enable interface if it is down
+      ansible.builtin.include_role:
+        name: enable_interface
+      when: "'UP' not in interface_result.stdout"
+
+    - name: 3. Perform ping test
+      ansible.builtin.include_role:
+        name: ping_test
+
+    - name: 4. Reboot host if ping test failed
+      ansible.builtin.include_role:
+        name: reboot_host
+      when: is_ping_failed | bool
