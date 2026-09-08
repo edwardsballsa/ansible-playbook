@@ -8,16 +8,16 @@
   tasks:
     - name: 1. Check interface status
       ansible.builtin.include_role:
-        name: check_interface
+        name: check_nic
 
     - name: 2. Enable interface if it is down
       ansible.builtin.include_role:
-        name: enable_interface
+        name: enable_nic
       when: "'UP' not in interface_result.stdout"
 
     - name: 3. Perform ping test
       ansible.builtin.include_role:
-        name: ping_test
+        name: ping_google_dns
 
     - name: 4. Reboot host if ping test failed
       ansible.builtin.include_role:
