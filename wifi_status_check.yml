@@ -2,7 +2,7 @@
 - hosts: wifi-routing.asl04233.asllab
   become: true
   vars:
-    target_interface: "wks16"
+    target_interface: "wls16"
     TARGET_DNS_IP: "8.8.8.8"
 
   tasks:
