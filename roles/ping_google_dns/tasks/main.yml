@@ -1,0 +1,10 @@
+---
+- name: Ping external IP address
+  ansible.builtin.command: "ping -c 3 {{ target_ip }}"
+  register: ping_result
+  changed_when: false
+  ignore_errors: true
+
+- name: Set ping failure flag
+  ansible.builtin.set_fact:
+    is_ping_failed: "{{ ping_result.rc != 0 }}"
