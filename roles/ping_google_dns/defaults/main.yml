@@ -1,2 +1,2 @@
 ---
-target_ip: "8.8.8.8"
+TARGET_DNS_IP: "8.8.8.8"
