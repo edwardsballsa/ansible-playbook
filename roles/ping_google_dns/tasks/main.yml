@@ -1,6 +1,6 @@
 ---
 - name: Ping external IP address
-  ansible.builtin.command: "ping -c 3 {{ target_ip }}"
+  ansible.builtin.command: "ping -c 3 {{ TARGET_DNS_IP }}"
   register: ping_result
   changed_when: false
   ignore_errors: true
