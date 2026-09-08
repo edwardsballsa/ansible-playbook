@@ -1,0 +1,13 @@
+---
+- name: Get status of network interface
+  ansible.builtin.shell: "ip link show {{ target_interface }}"
+  register: interface_result
+  changed_when: false
+  failed_when: interface_result.rc != 0
+
+- name: Verify if the interface is UP
+  ansible.builtin.assert:
+    that:
+      - "'UP' in interface_result.stdout"
+    fail_msg: "Network interface '{{ target_interface }}' exists but is NOT UP."
+    success_msg: "Network interface '{{ target_interface }}' is UP and running."
