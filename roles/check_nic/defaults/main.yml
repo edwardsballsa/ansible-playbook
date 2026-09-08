@@ -1,0 +1,3 @@
+---
+# Default network interface to check
+target_interface: "wls16"
