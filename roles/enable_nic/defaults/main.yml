@@ -1,3 +1,6 @@
 ---
-# Default network interface to enable
+# Default interface if not specified in playbook/inventory
 target_interface: "wls16"
+
+# Set to true if you are using NetworkManager on Ubuntu desktop/server
+use_networkmanager: true
