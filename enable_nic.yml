@@ -1,0 +1,7 @@
+---
+- hosts: "{{ TARGET_HOST }}"
+  become: true
+  roles:
+    - role: enable_nic
+      vars:
+        target_interface: "wls16"
