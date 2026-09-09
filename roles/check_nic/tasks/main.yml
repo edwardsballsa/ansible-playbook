@@ -1,13 +1,31 @@
 ---
 - name: Get status of network interface
-  ansible.builtin.shell: "ip link show {{ target_interface }}"
+  ansible.builtin.command: "ip link show {{ target_interface }}"
   register: interface_result
   changed_when: false
   failed_when: interface_result.rc != 0
+
+- name: Enable interface if it is DOWN
+  when: "'UP' not in interface_result.stdout"
+  block:
+    - name: Unblock wireless devices via rfkill
+      ansible.builtin.command: "rfkill unblock wifi"
+      changed_when: false
+      failed_when: false
+      become: true
+
+    - name: Bring the network interface UP
+      ansible.builtin.command: "ip link set {{ target_interface }} up"
+      become: true
+
+    - name: Re-check network interface status
+      ansible.builtin.command: "ip link show {{ target_interface }}"
+      register: interface_result
+      changed_when: false
 
 - name: Verify if the interface is UP
   ansible.builtin.assert:
     that:
       - "'UP' in interface_result.stdout"
-    fail_msg: "Network interface '{{ target_interface }}' exists but is NOT UP."
+    fail_msg: "Network interface '{{ target_interface }}' exists but could not be brought UP."
     success_msg: "Network interface '{{ target_interface }}' is UP and running."
