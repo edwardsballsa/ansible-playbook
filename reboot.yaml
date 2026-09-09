@@ -1,0 +1,5 @@
+---
+- hosts: wifi-routing.asl04233.asllab
+  become: true
+  roles:
+    - role: reboot_host
