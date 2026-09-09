@@ -2,4 +2,4 @@
 - name: Reboot the target host due to connection failure
   ansible.builtin.reboot:
     msg: "Reboot initiated by Ansible because ping test failed."
-    reboot_timeout: 300
+    reboot_timeout: "{{ REBOOT_TIMEOUT }}"
