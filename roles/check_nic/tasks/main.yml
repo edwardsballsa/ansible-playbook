@@ -20,12 +20,12 @@
 
     - name: Re-check network interface status
       ansible.builtin.command: "ip link show {{ target_interface }}"
-      register: interface_result
+      register: recheck_result
       changed_when: false
 
 - name: Verify if the interface is UP
   ansible.builtin.assert:
     that:
-      - "'UP' in interface_result.stdout"
+      - "'UP' in (recheck_result.stdout | default(interface_result.stdout))"
     fail_msg: "Network interface '{{ target_interface }}' exists but could not be brought UP."
     success_msg: "Network interface '{{ target_interface }}' is UP and running."
