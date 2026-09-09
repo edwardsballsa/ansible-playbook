@@ -1,19 +1,35 @@
 ---
+- name: Unblock wireless devices via rfkill
+  ansible.builtin.command: "rfkill unblock wifi"
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Enable Wi-Fi radio via NetworkManager (if applicable)
+  ansible.builtin.command: "nmcli radio wifi on"
+  changed_when: false
+  failed_when: false
+  become: true
+  when: use_networkmanager | bool
+
 - name: Bring the network interface up
-  ansible.builtin.shell: "ip link set {{ target_interface }} up"
+  ansible.builtin.command: "ip link set {{ target_interface }} up"
   register: enable_result
   changed_when: true
   failed_when: enable_result.rc != 0
+  become: true
 
-- name: Verify if the interface is now UP
-  ansible.builtin.shell: "ip link show {{ target_interface }}"
+- name: Verify network interface status
+  ansible.builtin.command: "ip link show {{ target_interface }}"
   register: verify_result
   changed_when: false
   failed_when: verify_result.rc != 0
 
-- name: Assert interface status is UP
+- name: Assert interface is administratively UP
   ansible.builtin.assert:
     that:
       - "'UP' in verify_result.stdout"
-    fail_msg: "Failed to bring network interface '{{ target_interface }}' UP."
-    success_msg: "Network interface '{{ target_interface }}' has been successfully enabled and is UP."
+    fail_msg: >-
+      Failed to bring network interface '{{ target_interface }}' UP. 
+      Ensure driver modules are loaded and physical radio switches are ON.
+    success_msg: "Network interface '{{ target_interface }}' is successfully UP."
