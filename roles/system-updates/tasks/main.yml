@@ -5,6 +5,12 @@
     upgrade: dist
   when: ansible_os_family == "Debian"
 
+- name: Update package cache and upgrade all packages on Alpine Linux
+  community.general.apk:
+    update_cache: yes
+    upgrade: yes
+  when: ansible_os_family == "Alpine"
+
 - name: System Update for RHEL/CentOS/Rocky/Alma
   dnf:
     name: "*"
