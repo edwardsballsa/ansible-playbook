@@ -6,20 +6,26 @@
     TARGET_DNS_IP: "8.8.8.8"
 
   tasks:
-    - name: 1. Check interface status
-      ansible.builtin.include_role:
-        name: check_nic
-
-    - name: 2. Enable interface if it is down
-      ansible.builtin.include_role:
-        name: enable_nic
-      when: "'UP' not in interface_result.stdout"
-
-    - name: 3. Perform ping test
+    - name: 1. Perform ping test
       ansible.builtin.include_role:
         name: ping_google_dns
 
-    - name: 4. Reboot host if ping test failed
+    - name: 2. Check interface status
+      ansible.builtin.include_role:
+        name: check_nic
+      when: is_ping_failed | bool
+
+    - name: 3. Enable interface if it is down
+      ansible.builtin.include_role:
+        name: enable_nic
+      when: "is_ping_failed | bool and 'UP' not in interface_result.stdout"
+
+    - name: 4. Reboot host if ping test still failed
+      ansible.builtin.include_role:
+        name: ping_google_dns
+      # Re-run ping to see if enable_nic fixed it
+      
+    - name: 5. Final reboot check
       ansible.builtin.include_role:
         name: reboot_host
       when: is_ping_failed | bool
