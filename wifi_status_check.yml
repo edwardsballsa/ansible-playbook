@@ -10,22 +10,17 @@
       ansible.builtin.include_role:
         name: ping_google_dns
 
-    - name: 2. Check interface status
+    - name: 2. Check interface status and try to enable
       ansible.builtin.include_role:
         name: check_nic
       when: is_ping_failed | bool
 
-    - name: 3. Enable interface if it is down
-      ansible.builtin.include_role:
-        name: enable_nic
-      when: "is_ping_failed | bool and 'UP' not in interface_result.stdout"
-
-    - name: 4. Reboot host if ping test still failed
+    - name: 3. Re-verify ping after potential interface fix
       ansible.builtin.include_role:
         name: ping_google_dns
-      # Re-run ping to see if enable_nic fixed it
-      
-    - name: 5. Final reboot check
+      when: is_ping_failed | bool
+
+    - name: 4. Final reboot check
       ansible.builtin.include_role:
         name: reboot_host
       when: is_ping_failed | bool
