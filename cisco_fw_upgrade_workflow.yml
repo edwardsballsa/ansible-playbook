@@ -1,0 +1,7 @@
+---
+- name: Cisco Firmware Update Workflow
+  hosts: cisco_switches
+  gather_facts: false
+  become: true
+  roles:
+    - cisco_fw_update

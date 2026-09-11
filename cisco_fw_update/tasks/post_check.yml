@@ -1,0 +1,17 @@
+---
+# tasks/post_check.yml
+- name: Get MAC address table after update
+  cisco.ios.ios_command:
+    commands:
+      - show mac address-table dynamic
+  register: mac_table_post
+
+- name: Read pre-upgrade snapshot
+  slurp:
+    src: "/tmp/pre_upgrade_mac_{{ inventory_hostname }}.txt"
+  register: pre_snapshot
+
+- name: Compare MAC addresses
+  fail:
+    msg: "MAC Address mismatch or Interface DOWN detected on {{ inventory_hostname }}!"
+  when: pre_snapshot.content | b64decode != mac_table_post.stdout[0]

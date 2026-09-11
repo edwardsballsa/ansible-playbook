@@ -1,0 +1,10 @@
+---
+# tasks/main.yml
+- name: Run Pre-Upgrade Interface Check
+  include_tasks: pre_check.yml
+
+- name: Perform Firmware Update
+  include_tasks: update_firmware.yml
+
+- name: Run Post-Upgrade Interface Check
+  include_tasks: post_check.yml
