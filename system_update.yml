@@ -1,6 +1,6 @@
 ---
 - name: System Wide Update
-  hosts: "{{ TARGET_HOST }}"
+  hosts: "{{ TARGET_HOST | default('all') }}"
   become: true
   roles:
     - system-updates
