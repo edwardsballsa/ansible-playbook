@@ -1,0 +1,5 @@
+---
+# Default values for email notification
+email_addresses_list: []
+email_subject: "Default Notification Subject"
+email_body: "Default notification message body."

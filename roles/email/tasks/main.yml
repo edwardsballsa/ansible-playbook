@@ -1,0 +1,10 @@
+---
+- name: Ensure email list is provided
+  fail:
+    msg: "The variable 'email_addresses_list' must be defined as a list and cannot be empty."
+  when: email_addresses_list | length == 0
+
+- name: Send emails to the specified list
+  debug:
+    msg: "Sending Email -> To: {{ item }}, Subject: {{ email_subject }}, Body: {{ email_body }}"
+  loop: "{{ email_addresses_list }}"

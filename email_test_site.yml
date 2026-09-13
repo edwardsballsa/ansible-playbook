@@ -1,0 +1,11 @@
+---
+- hosts: all
+  become: yes
+  roles:
+    - role: email
+      vars:
+        email_addresses_list:
+          - admin@example.com
+          - devops@example.com
+        email_subject: "Server Alert: Disk Space Low"
+        email_body: "The root partition on {{ inventory_hostname }} has reached 90% usage."
