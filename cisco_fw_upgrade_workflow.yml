@@ -1,6 +1,6 @@
 ---
 - name: Cisco Firmware Update Workflow
-  hosts: cisco_switches
+  hosts: all
   gather_facts: false
   become: true
   tasks:
@@ -9,18 +9,9 @@
         name: cisco_pre_check
 
     - name: Execute Firmware Upgrade (Verified Playbook)
-      include_role: cisco_firmware_updates
+      include_role:
+        name: cisco_firmware_updates
 
     - name: Run Post-Upgrade Checks
       include_role:
         name: cisco_post_check
-
-    - name: Send Email Notification if Differences Found
-      include_role:
-        name: email
-      vars:
-        email_addresses_list:
-          - admin@example.com
-        email_subject: "Firmware Update Report: {{ inventory_hostname }}"
-        email_body: "{{ diff_report }}"
-      when: has_diff | default(false)
