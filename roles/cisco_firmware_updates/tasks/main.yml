@@ -1,148 +1,147 @@
 ---
 - name: Get flash filesystem summary from switch
   become: true
-    become_method: enable
-    cisco.ios.ios_command:
-      commands:
-        - "dir flash:"
-    register: flash_dir
-    vars:
-      ansible_command_timeout: 60  # In seconds, 60 sec = 1 mins
+  cisco.ios.ios_command:
+    commands:
+      - "dir flash:"
+  register: flash_dir
+  vars:
+    ansible_command_timeout: 60  # In seconds, 60 sec = 1 mins
 
-  - name: Gather initial switch facts
-    cisco.ios.ios_facts:
-      gather_subset: hardware
+- name: Gather initial switch facts
+  cisco.ios.ios_facts:
+    gather_subset: hardware
 
-  - name: Determine OS mode (IOS-XE Install Mode vs Classic IOS)
-    # Catalyst 9000 series and 3850s typically use IOS-XE Install Mode
-    set_fact:
-      is_ios_xe: "{{ 'C9' in ansible_net_model or 'C3850' in ansible_net_model }}"
-  - name: Parse available flash space from command output
-    ansible.builtin.set_fact:
-      flash_free_bytes: "{{ flash_dir.stdout[0] | regex_search('\\((\\d+) bytes free\\)', '\\1') | first | int }}"
-    failed_when: flash_free_bytes is not defined
+- name: Determine OS mode (IOS-XE Install Mode vs Classic IOS)
+  # Catalyst 9000 series and 3850s typically use IOS-XE Install Mode
+  set_fact:
+    is_ios_xe: "{{ 'C9' in ansible_net_model or 'C3850' in ansible_net_model }}"
+- name: Parse available flash space from command output
+  ansible.builtin.set_fact:
+    flash_free_bytes: "{{ flash_dir.stdout[0] | regex_search('\\((\\d+) bytes free\\)', '\\1') | first | int }}"
+  failed_when: flash_free_bytes is not defined
 
-  - name: Assert sufficient flash memory exists
-    ansible.builtin.assert:
-      that:
-        - (flash_free_bytes | int) > ((required_size | int * 1024 * 1024) | round(2))
-      fail_msg: "Insufficient flash space. Available: {{ (flash_free_bytes | int / 1024 / 1024) | round(2) }} MB. Required: {{ required_size }} MB."
-      success_msg: "Space check passed. Available: {{ (flash_free_bytes | int / 1024 / 1024) | round(2) }} MB. More than {{ required_size }} MB."     
-    
-  - name: Check if firmware already exists on flash and verify MD5
-    become: true
-    become_method: enable
-    cisco.ios.ios_command:
-      commands:
-        - "verify /md5 flash:{{ firmware_file }}"
-    register: md5_check
-    ignore_errors: true
-    vars:
-      ansible_command_timeout: 120  # In seconds, 120 sec = 2 mins
-
-  - name: Download firmware from SFTP server if not present or checksum fails
-    become: true
-    become_method: enable
-    cisco.ios.ios_command:
-      commands: 
-        - command: "copy sftp://{{ sftp_user }}:{{ sftp_pass | urlencode }}@{{ sftp_server }}{{ remote_path }}/{{ firmware_file }} flash:{{ firmware_file }}"
-          prompt: "Destination filename"
-          answer: "\r"
-    when: md5_check.failed or expected_md5 not in md5_check.stdout[0]
-    vars:
-      ansible_command_timeout: 1800  # In seconds, 1800 sec = 30mins
-
-  - name: Re-verify MD5 checksum after download
-    become: true
-    become_method: enable
-    cisco.ios.ios_command:
-      commands:
-        - "verify /md5 flash:{{ firmware_file }}"
-    register: post_download_md5
-    when: md5_check.failed or expected_md5 not in md5_check.stdout[0]
-    vars:
-      ansible_command_timeout: 120  # In seconds
-
-  - name: Assert that the MD5 checksum matches the expected value
-    ansible.builtin.assert:
-      that:
-        - expected_md5 in post_download_md5.stdout[0]
-      fail_msg: "MD5 checksum verification failed! Aborting boot configuration."
-      success_msg: "MD5 checksum verified successfully."
-    when: md5_check.failed or expected_md5 not in md5_check.stdout[0]
-
-  # ---------------------------------------------------------
-  # UPGRADE PATH A: IOS-XE (Install Mode - e.g., Catalyst 9k)
-  # ---------------------------------------------------------
-  - name: Install and activate firmware (IOS-XE Install Mode
-    become: true
-    become_method: enable
-    ansible.netcommon.cli_command:
-      command: "install add file flash:{{ firmware_file }} activate commit"
-      prompt:
-        - "This operation may require a reload of the system. Do you want to proceed"
-        - "Do you want to proceed"
-      answer:
-        - "y"
-        - "y"
-    when: is_ios_xe
-    vars:
-      ansible_command_timeout: 1800
-    ignore_errors: true # The SSH session will drop when the switch reloads
+- name: Assert sufficient flash memory exists
+  ansible.builtin.assert:
+    that:
+      - (flash_free_bytes | int) > ((required_size | int * 1024 * 1024) | round(2))
+    fail_msg: "Insufficient flash space. Available: {{ (flash_free_bytes | int / 1024 / 1024) | round(2) }} MB. Required: {{ required_size }} MB."
+    success_msg: "Space check passed. Available: {{ (flash_free_bytes | int / 1024 / 1024) | round(2) }} MB. More than {{ required_size }} MB."     
   
-  # ---------------------------------------------------------
-  # UPGRADE PATH B: Classic IOS (Bundle Mode - e.g., Catalyst 2960X)
-  # ---------------------------------------------------------
-  - name: Set boot variable to new firmware (Classic IOS)
-    become: true
-    become_method: enable
-    cisco.ios.ios_config:
-      lines:
-        - "boot system flash:{{ firmware_file }}"
-      save_when: always
-    when: not is_ios_xe
+- name: Check if firmware already exists on flash and verify MD5
+  become: true
+  become_method: enable
+  cisco.ios.ios_command:
+    commands:
+      - "verify /md5 flash:{{ firmware_file }}"
+  register: md5_check
+  ignore_errors: true
+  vars:
+    ansible_command_timeout: 120  # In seconds, 120 sec = 2 mins
 
-  - name: Reload Switch (Classic IOS)
-    become: true
-    become_method: enable
-    ansible.netcommon.cli_command:
-      command: "reload"
-      prompt:
-        - "System configuration has been modified. Save?"
-        - "Proceed with reload?"
-      answer:
-        - "y"
-        - "\r"
-    when: not is_ios_xe
-    vars:
-      ansible_command_timeout: 1800
-    ignore_errors: true # The SSH session will drop when the switch reloads
+- name: Download firmware from SFTP server if not present or checksum fails
+  become: true
+  become_method: enable
+  cisco.ios.ios_command:
+    commands: 
+      - command: "copy sftp://{{ sftp_user }}:{{ sftp_pass | urlencode }}@{{ sftp_server }}{{ remote_path }}/{{ firmware_file }} flash:{{ firmware_file }}"
+        prompt: "Destination filename"
+        answer: "\r"
+  when: md5_check.failed or expected_md5 not in md5_check.stdout[0]
+  vars:
+    ansible_command_timeout: 1800  # In seconds, 1800 sec = 30mins
 
-  # ---------------------------------------------------------
-  # POST-UPGRADE VERIFICATION
-  # ---------------------------------------------------------
-  - name: Clear stale persistent connection cashe
-    ansible.builtin.meta: reset_connection
-    
-  - name: Wait for switch to reboot and become reachable
-    ansible.builtin.wait_for_connection:
-      delay: 180       # Wait 3 minutes before starting to poll
-      timeout: 1800    # Give the switch up to 20 minutes to come back
-      sleep: 30
+- name: Re-verify MD5 checksum after download
+  become: true
+  become_method: enable
+  cisco.ios.ios_command:
+    commands:
+      - "verify /md5 flash:{{ firmware_file }}"
+  register: post_download_md5
+  when: md5_check.failed or expected_md5 not in md5_check.stdout[0]
+  vars:
+    ansible_command_timeout: 120  # In seconds
 
-  - name: Gather facts after reload
-    cisco.ios.ios_facts:
-      gather_subset: hardware
+- name: Assert that the MD5 checksum matches the expected value
+  ansible.builtin.assert:
+    that:
+      - expected_md5 in post_download_md5.stdout[0]
+    fail_msg: "MD5 checksum verification failed! Aborting boot configuration."
+    success_msg: "MD5 checksum verified successfully."
+  when: md5_check.failed or expected_md5 not in md5_check.stdout[0]
 
-  - name: Verify the new version is running
-    debug:
-      msg: "SUCCESS: Switch is online. Running version is now {{ ansible_net_version }}"
+# ---------------------------------------------------------
+# UPGRADE PATH A: IOS-XE (Install Mode - e.g., Catalyst 9k)
+# ---------------------------------------------------------
+- name: Install and activate firmware (IOS-XE Install Mode
+  become: true
+  become_method: enable
+  ansible.netcommon.cli_command:
+    command: "install add file flash:{{ firmware_file }} activate commit"
+    prompt:
+      - "This operation may require a reload of the system. Do you want to proceed"
+      - "Do you want to proceed"
+    answer:
+      - "y"
+      - "y"
+  when: is_ios_xe
+  vars:
+    ansible_command_timeout: 1800
+  ignore_errors: true # The SSH session will drop when the switch reloads
 
-  - name: Assert version updated successfully
-    assert:
-      # Extracts the version number from typical Cisco bin filenames to compare against the running version
-      # Example: cat9k_iosxe.17.06.04.SPA.bin -> checks if '17.06.04' is in the running version
-      that:
-        - "(firmware_file | regex_search('([0-9]+\\.[0-9]+\\.[0-9]+)')) in ansible_net_version or (firmware_file | regex_search('([0-9]+\\.[0-9]+\\([0-9A-Za-z]+\\))')) in ansible_net_version"
-      fail_msg: "WARNING: Switch rebooted but does not appear to be running the new version."
-      success_msg: "Firmware version confirmed and running."
+# ---------------------------------------------------------
+# UPGRADE PATH B: Classic IOS (Bundle Mode - e.g., Catalyst 2960X)
+# ---------------------------------------------------------
+- name: Set boot variable to new firmware (Classic IOS)
+  become: true
+  become_method: enable
+  cisco.ios.ios_config:
+    lines:
+      - "boot system flash:{{ firmware_file }}"
+    save_when: always
+  when: not is_ios_xe
+
+- name: Reload Switch (Classic IOS)
+  become: true
+  become_method: enable
+  ansible.netcommon.cli_command:
+    command: "reload"
+    prompt:
+      - "System configuration has been modified. Save?"
+      - "Proceed with reload?"
+    answer:
+      - "y"
+      - "\r"
+  when: not is_ios_xe
+  vars:
+    ansible_command_timeout: 1800
+  ignore_errors: true # The SSH session will drop when the switch reloads
+
+# ---------------------------------------------------------
+# POST-UPGRADE VERIFICATION
+# ---------------------------------------------------------
+- name: Clear stale persistent connection cashe
+  ansible.builtin.meta: reset_connection
+  
+- name: Wait for switch to reboot and become reachable
+  ansible.builtin.wait_for_connection:
+    delay: 180       # Wait 3 minutes before starting to poll
+    timeout: 1800    # Give the switch up to 20 minutes to come back
+    sleep: 30
+
+- name: Gather facts after reload
+  cisco.ios.ios_facts:
+    gather_subset: hardware
+
+- name: Verify the new version is running
+  debug:
+    msg: "SUCCESS: Switch is online. Running version is now {{ ansible_net_version }}"
+
+- name: Assert version updated successfully
+  assert:
+    # Extracts the version number from typical Cisco bin filenames to compare against the running version
+    # Example: cat9k_iosxe.17.06.04.SPA.bin -> checks if '17.06.04' is in the running version
+    that:
+      - "(firmware_file | regex_search('([0-9]+\\.[0-9]+\\.[0-9]+)')) in ansible_net_version or (firmware_file | regex_search('([0-9]+\\.[0-9]+\\([0-9A-Za-z]+\\))')) in ansible_net_version"
+    fail_msg: "WARNING: Switch rebooted but does not appear to be running the new version."
+    success_msg: "Firmware version confirmed and running."
