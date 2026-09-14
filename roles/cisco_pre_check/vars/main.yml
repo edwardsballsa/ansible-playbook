@@ -7,8 +7,20 @@ critical_network_commands:
   - "show cdp neighbors"
 
 # General verification commands
+# List of show commands to run on the Cisco switch
 show_commands:
-  - "show version"
-  - "show inventory"
+  - "show ver"
+  - "show run"
+  - "show redundancy"
   - "show ip interface brief"
-  - "show running-config"
+  - "show interface status"
+  - "show interface"
+  - "show ip route"
+  - "show cdp nei detail"
+  - "show env all"
+  - "show spanning-tree"
+  - "show power inline"
+  - "show ip ssh"
+
+# Local directory where outputs will be saved
+backup_dir: "./captured_outputs/{{ inventory_hostname }}"
