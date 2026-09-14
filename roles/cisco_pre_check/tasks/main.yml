@@ -1,5 +1,6 @@
 ---
 - name: Gather initial switch facts
+  become: true
   cisco.ios.ios_facts:
     gather_subset: hardware
 
