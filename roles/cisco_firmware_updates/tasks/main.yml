@@ -44,7 +44,7 @@
   become_method: enable
   cisco.ios.ios_command:
     commands: 
-      - command: "copy sftp://{{ sftp_user }}:{{ sftp_pass | urlencode }}@{{ sftp_server }}{{ remote_path }}/{{ firmware_file }} flash:{{ firmware_file }}"
+      - command: "copy sftp://{{ sftp_user }}:{{ sftp_pass | urlencode }}@{{ sftp_server }}{{ remote_path | default('') }}/{{ firmware_file }} flash:{{ firmware_file }}"
         prompt: "Destination filename"
         answer: "\r"
   when: md5_check.failed or expected_md5 not in md5_check.stdout[0]
