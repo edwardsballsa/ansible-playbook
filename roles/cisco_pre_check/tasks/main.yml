@@ -12,11 +12,7 @@
 
 - name: Capture Critical Network State
   cisco.ios.ios_command:
-    commands:
-      - "show interfaces status"
-      - "show interfaces description"
-      - "show mac address-table"
-      - "show cdp neighbors"
+    commands: "{{ critical_network_commands }}"
   register: network_state
   become: true
   become_method: ansible.netcommon.enable
@@ -27,7 +23,7 @@
     dest: "{{ backup_dir }}/{{ inventory_hostname }}/{{ item.0 | replace(' ', '_') }}.txt"
     mode: '0644'
   delegate_to: localhost
-  loop: "{{ ['show interfaces status', 'show interfaces description', 'show mac address-table', 'show cdp neighbors'] | zip(network_state.stdout) | list }}"
+  loop: "{{ critical_network_commands | zip(network_state.stdout) | list }}"
 
 - name: Run additional verification commands
   ansible.netcommon.cli_command:
