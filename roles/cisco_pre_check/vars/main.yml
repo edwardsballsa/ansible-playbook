@@ -1,7 +1,14 @@
 ---
-# Critical commands for pre-upgrade state capture
+# Critical commands for pre-upgrade state capture and comparison
 critical_network_commands:
   - "show interfaces status"
   - "show interfaces description"
   - "show mac address-table"
   - "show cdp neighbors"
+
+# General verification commands
+show_commands:
+  - "show version"
+  - "show inventory"
+  - "show ip interface brief"
+  - "show running-config"
