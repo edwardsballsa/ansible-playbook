@@ -1,40 +1,40 @@
 ---
-- name: Gather initial switch facts
+- name: Gather final switch facts
   cisco.ios.ios_facts:
     gather_subset: hardware
 
-- name: Capture Interface Status and MAC Addresses
+- name: Capture Interface Status and MAC Addresses (Post-Check)
   cisco.ios.ios_command:
     commands:
       - "show interfaces status"
       - "show mac address-table"
-  register: network_state
+  register: network_state_post
   become: true
   become_method: ansible.netcommon.enable
 
-- name: Save network state to local files
+- name: Save post-upgrade network state to local files
   ansible.builtin.copy:
     content: "{{ item.stdout }}"
-    dest: "{{ backup_dir }}/{{ item.item | replace(' ', '_') }}.txt"
+    dest: "{{ backup_dir }}/POST_{{ item.item | replace(' ', '_') }}.txt"
     mode: '0644'
   delegate_to: localhost
-  loop: "{{ network_state.results }}"
+  loop: "{{ network_state_post.results }}"
   when: item.failed is not defined or not item.failed
 
 - name: Run additional verification commands
   ansible.netcommon.cli_command:
     command: "{{ item }}"
   loop: "{{ show_commands }}"
-  register: command_results
+  register: command_results_post
   become: true
   become_method: ansible.netcommon.enable
   ignore_errors: true
 
-- name: Save verification outputs to local files
+- name: Save post-upgrade verification outputs
   ansible.builtin.copy:
     content: "{{ item.stdout }}"
-    dest: "{{ backup_dir }}/{{ item.item | replace(' ', '_') }}.txt"
+    dest: "{{ backup_dir }}/POST_{{ item.item | replace(' ', '_') }}.txt"
     mode: '0644'
   delegate_to: localhost
-  loop: "{{ command_results.results }}"
+  loop: "{{ command_results_post.results }}"
   when: item.failed is not defined or not item.failed

@@ -3,5 +3,15 @@
   hosts: cisco_switches
   gather_facts: false
   become: true
-  roles:
-    - cisco_fw_update
+  tasks:
+    - name: Run Pre-Upgrade Checks
+      include_role:
+        name: cisco_pre_check
+
+    - name: Execute Firmware Upgrade
+      include_role:
+        name: cisco_fw_update
+
+    - name: Run Post-Upgrade Checks
+      include_role:
+        name: cisco_post_check
