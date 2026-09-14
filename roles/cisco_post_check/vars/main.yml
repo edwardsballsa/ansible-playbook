@@ -1,0 +1,25 @@
+---
+# Critical commands for pre-upgrade state capture and comparison
+critical_network_commands:
+  - "show interfaces status"
+  - "show interfaces description"
+  - "show mac address-table"
+  - "show cdp neighbors"
+
+# General verification commands
+show_commands:
+  - "show ver"
+  - "show run"
+  - "show redundancy"
+  - "show ip interface brief"
+  - "show interface status"
+  - "show interface"
+  - "show ip route"
+  - "show cdp nei detail"
+  - "show env all"
+  - "show spanning-tree"
+  - "show power inline"
+  - "show ip ssh"
+
+# Local directory where outputs will be saved
+backup_dir: "./captured_outputs/{{ inventory_hostname }}"

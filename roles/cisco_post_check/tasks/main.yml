@@ -5,18 +5,14 @@
 
 - name: Ensure local backup directory exists for this host
   ansible.builtin.file:
-    path: "{{ backup_dir }}/{{ inventory_hostname }}"
+    path: "{{ backup_dir }}"
     state: directory
     mode: '0755'
   delegate_to: localhost
 
 - name: Capture Critical Network State (Post-Check)
   cisco.ios.ios_command:
-    commands:
-      - "show interfaces status"
-      - "show interfaces description"
-      - "show mac address-table"
-      - "show cdp neighbors"
+    commands: "{{ critical_network_commands }}"
   register: network_state_post
   become: true
   become_method: ansible.netcommon.enable
@@ -24,21 +20,20 @@
 - name: Save post-upgrade network state to local files
   ansible.builtin.copy:
     content: "{{ item.1 }}"
-    dest: "{{ backup_dir }}/{{ inventory_hostname }}/POST_{{ item.0 | replace(' ', '_') }}.txt"
+    dest: "{{ backup_dir }}/POST_{{ item.0 | replace(' ', '_') }}.txt"
     mode: '0644'
   delegate_to: localhost
-  loop: "{{ ['show interfaces status', 'show interfaces description', 'show mac address-table', 'show cdp neighbors'] | zip(network_state_post.stdout) | list }}"
+  loop: "{{ critical_network_commands | zip(network_state_post.stdout) | list }}"
 
 - name: Compare Pre and Post State
   set_fact:
     diff_report: |
       Network State Comparison for {{ inventory_hostname }}:
       --------------------------------------------------
-      {% set commands = ['show interfaces status', 'show interfaces description', 'show mac address-table', 'show cdp neighbors'] %}
-      {% for cmd in commands %}
+      {% for cmd in critical_network_commands %}
       Command: {{ cmd }}
-      {% set pre_file = backup_dir ~ '/' ~ inventory_hostname ~ '/' ~ (cmd | replace(' ', '_')) ~ '.txt' %}
-      {% set post_file = backup_dir ~ '/' ~ inventory_hostname ~ '/POST_' ~ (cmd | replace(' ', '_')) ~ '.txt' %}
+      {% set pre_file = backup_dir ~ '/' ~ (cmd | replace(' ', '_')) ~ '.txt' %}
+      {% set post_file = backup_dir ~ '/POST_' ~ (cmd | replace(' ', '_')) ~ '.txt' %}
       {% if pre_file is exists and post_file is exists %}
         {% set pre_lines = lookup('file', pre_file).splitlines() | map('trim') | list %}
         {% set post_lines = lookup('file', post_file).splitlines() | map('trim') | list %}
@@ -78,7 +73,7 @@
 - name: Save post-upgrade verification outputs
   ansible.builtin.copy:
     content: "{{ item.stdout }}"
-    dest: "{{ backup_dir }}/{{ inventory_hostname }}/POST_{{ item.item | replace(' ', '_') }}.txt"
+    dest: "{{ backup_dir }}/POST_{{ item.item | replace(' ', '_') }}.txt"
     mode: '0644'
   delegate_to: localhost
   loop: "{{ command_results_post.results }}"
