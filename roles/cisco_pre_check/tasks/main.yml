@@ -1,6 +1,5 @@
 ---
 - name: Gather initial switch facts
-  become: true
   cisco.ios.ios_facts:
     gather_subset: hardware
 
@@ -15,12 +14,11 @@
 
 - name: Save network state to local files
   ansible.builtin.copy:
-    content: "{{ item.stdout }}"
-    dest: "{{ backup_dir }}/{{ item.item | replace(' ', '_') }}.txt"
+    content: "{{ item.1 }}"
+    dest: "{{ backup_dir }}/{{ item.0 | replace(' ', '_') }}.txt"
     mode: '0644'
   delegate_to: localhost
-  loop: "{{ network_state.results }}"
-  when: item.failed is not defined or not item.failed
+  loop: "{{ ['show interfaces status', 'show mac address-table'] | zip(network_state.stdout) | list }}"
 
 - name: Run additional verification commands
   ansible.netcommon.cli_command:
