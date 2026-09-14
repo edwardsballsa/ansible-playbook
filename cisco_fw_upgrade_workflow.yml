@@ -9,7 +9,7 @@
         name: cisco_pre_check
 
     - name: Execute Firmware Upgrade (Verified Playbook)
-      include_tasks: cisco_firmware_updates.yaml
+      include_tasks: cisco_firmware_updates.yml
 
     - name: Run Post-Upgrade Checks
       include_role:
