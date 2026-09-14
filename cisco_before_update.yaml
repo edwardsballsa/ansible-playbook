@@ -1,0 +1,8 @@
+---
+- name: Collect Cisco Switch Diagnostics
+  hosts: all
+  gather_facts: false
+  connection: ansible.netcommon.network_cli
+
+  roles:
+    - cisco_check_before_update
