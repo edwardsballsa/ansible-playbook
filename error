@@ -1,11 +1,4 @@
 msg: >-
-  failed to elevate privilege to enable mode, still at level [1] and prompt
-  [b'\nhapdlh-d-ansible-0-sw>']
-invocation:
-  module_args:
-    gather_subset:
-      - hardware
-    available_network_resources: false
-    gather_network_resources: null
+  'dict object' has no attribute 'results'. 'dict object' has no attribute
+  'results'
 _ansible_no_log: false
-changed: false
