@@ -10,11 +10,13 @@
     mode: '0755'
   delegate_to: localhost
 
-- name: Capture Interface Status and MAC Addresses (Post-Check)
+- name: Capture Critical Network State (Post-Check)
   cisco.ios.ios_command:
     commands:
       - "show interfaces status"
+      - "show interfaces description"
       - "show mac address-table"
+      - "show cdp neighbors"
   register: network_state_post
   become: true
   become_method: ansible.netcommon.enable
@@ -25,7 +27,44 @@
     dest: "{{ backup_dir }}/{{ inventory_hostname }}/POST_{{ item.0 | replace(' ', '_') }}.txt"
     mode: '0644'
   delegate_to: localhost
-  loop: "{{ ['show interfaces status', 'show mac address-table'] | zip(network_state_post.stdout) | list }}"
+  loop: "{{ ['show interfaces status', 'show interfaces description', 'show mac address-table', 'show cdp neighbors'] | zip(network_state_post.stdout) | list }}"
+
+- name: Compare Pre and Post State
+  set_fact:
+    diff_report: |
+      Network State Comparison for {{ inventory_hostname }}:
+      --------------------------------------------------
+      {% set commands = ['show interfaces status', 'show interfaces description', 'show mac address-table', 'show cdp neighbors'] %}
+      {% for cmd in commands %}
+      Command: {{ cmd }}
+      {% set pre_file = backup_dir ~ '/' ~ inventory_hostname ~ '/' ~ (cmd | replace(' ', '_')) ~ '.txt' %}
+      {% set post_file = backup_dir ~ '/' ~ inventory_hostname ~ '/POST_' ~ (cmd | replace(' ', '_')) ~ '.txt' %}
+      {% if pre_file is exists and post_file is exists %}
+        {% set pre_lines = lookup('file', pre_file).splitlines() | map('trim') | list %}
+        {% set post_lines = lookup('file', post_file).splitlines() | map('trim') | list %}
+        {% set missing = pre_lines | difference(post_lines) %}
+        {% set added = post_lines | difference(pre_lines) %}
+        {% if missing | length > 0 %}
+          [MISSING]:
+          {{ missing | join('\n') }}
+        {% endif %}
+        {% if added | length > 0 %}
+          [ADDED]:
+          {{ added | join('\n') }}
+        {% endif %}
+        {% if missing | length == 0 and added | length == 0 %}
+          No changes detected.
+        {% endif %}
+      {% else %}
+        Could not find pre or post file for comparison.
+      {% endif %}
+      --------------------------------------------------
+      {% endfor %}
+  delegate_to: localhost
+
+- name: Set diff flag
+  set_fact:
+    has_diff: "{{ 'No changes detected' not in diff_report and 'Could not find' not in diff_report }}"
 
 - name: Run additional verification commands
   ansible.netcommon.cli_command:

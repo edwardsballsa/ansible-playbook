@@ -9,8 +9,18 @@
         name: cisco_pre_check
 
     - name: Execute Firmware Upgrade (Verified Playbook)
-      include_tasks: cisco_firmware_updates.yml
+      include_tasks: cisco_firmware_updates.yaml
 
     - name: Run Post-Upgrade Checks
       include_role:
         name: cisco_post_check
+
+    - name: Send Email Notification if Differences Found
+      include_role:
+        name: email
+      vars:
+        email_addresses_list:
+          - admin@example.com
+        email_subject: "Firmware Update Report: {{ inventory_hostname }}"
+        email_body: "{{ diff_report }}"
+      when: has_diff | default(false)
