@@ -6,13 +6,23 @@
     TARGET_DNS_IP: "8.8.8.8"
 
   tasks:
-    - name: 1. Perform ping test
+    - name: 1. Perform initial ping test
       ansible.builtin.include_role:
         name: ping_google_dns
+
+    - name: Record initial ping failure
+      ansible.builtin.set_fact:
+        initial_ping_failed: "{{ is_ping_failed }}"
+        recovery_action: "none"
 
     - name: 2. Check interface status and try to enable
       ansible.builtin.include_role:
         name: check_nic
+      when: is_ping_failed | bool
+
+    - name: Record interface fix attempted
+      ansible.builtin.set_fact:
+        recovery_action: "interface_reset"
       when: is_ping_failed | bool
 
     - name: 3. Re-verify ping after potential interface fix
@@ -20,7 +30,28 @@
         name: ping_google_dns
       when: is_ping_failed | bool
 
+    - name: Record reboot attempted
+      ansible.builtin.set_fact:
+        recovery_action: "reboot"
+      when: is_ping_failed | bool
+
     - name: 4. Final reboot check
       ansible.builtin.include_role:
         name: reboot_host
       when: is_ping_failed | bool
+
+    - name: Final ping verification after reboot
+      ansible.builtin.include_role:
+        name: ping_google_dns
+      when: is_ping_failed | bool
+
+    - name: Output summary for watchdog
+      ansible.builtin.debug:
+        msg: |
+          WIFI_STATUS_SUMMARY:
+          initial_ping_failed={{ initial_ping_failed | default(false) }}
+          final_ping_failed={{ is_ping_failed | default(false) }}
+          recovery_action={{ recovery_action | default('none') }}
+          target_interface={{ target_interface }}
+          target_ip={{ TARGET_DNS_IP }}
+      changed_when: false

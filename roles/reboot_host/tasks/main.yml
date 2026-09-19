@@ -3,3 +3,18 @@
   ansible.builtin.reboot:
     msg: "Reboot initiated by Ansible because ping test failed."
     reboot_timeout: "{{ REBOOT_TIMEOUT }}"
+    connect_timeout: 30
+    post_reboot_delay: 30
+
+- name: Clear stale connection cache after reboot
+  ansible.builtin.meta: reset_connection
+
+- name: Wait for SSH to become reachable after reboot
+  ansible.builtin.wait_for_connection:
+    delay: 30
+    timeout: 300
+    sleep: 10
+
+- name: Verify host is fully accessible (gather facts)
+  ansible.builtin.setup:
+  changed_when: false
