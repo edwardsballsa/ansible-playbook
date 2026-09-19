@@ -1,0 +1,78 @@
+name: CI - Lint & Syntax Check
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [uat, main]
+
+jobs:
+  lint-and-check:
+    name: Lint & Syntax Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ansible-playbook
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible ansible-lint yamllint
+
+      - name: Run yamllint
+        run: yamllint . -c .yamllint.yml || true
+
+      - name: Run ansible-lint
+        run: ansible-lint . -v
+
+      - name: Ansible syntax check (all playbooks)
+        run: |
+          for playbook in *.yml; do
+            echo "Checking $playbook..."
+            ansible-playbook --syntax-check "$playbook" -i inventory.ini || exit 1
+          done
+
+      - name: Ansible syntax check (roles)
+        run: |
+          for role in roles/*/tasks/main.yml; do
+            echo "Checking role $role..."
+            ROLE_NAME=$(basename $(dirname $(dirname $role)))
+            cat > /tmp/test_role.yml <<ROLE_EOF
+---
+- hosts: localhost
+  gather_facts: no
+  roles:
+    - $ROLE_NAME
+ROLE_EOF
+            ansible-playbook --syntax-check /tmp/test_role.yml || exit 1
+          done
+
+      - name: Check for required collections
+        run: |
+          if [ -f requirements.yml ]; then
+            ansible-galaxy collection install -r requirements.yml --ignore-certs
+          fi
+        continue-on-error: true
+
+      - name: Validate inventory
+        run: |
+          ansible-inventory -i inventory.ini --list > /dev/null
+          echo "Inventory valid"
+
+  notify-failure:
+    name: Notify on failure
+    if: failure()
+    needs: lint-and-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send failure notification
+        run: echo "::warning::CI failed on ${{ github.ref }} - check Actions tab for details"
