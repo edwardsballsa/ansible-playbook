@@ -2,5 +2,8 @@
 - name: System Wide Update
   hosts: "{{ TARGET_HOST | default('all') }}"
   become: true
+  vars:
+    run_update: "{{ RUN_UPDATE | default(false) }}"
+    reboot_check: "{{ REBOOT_CHECK | default(true) }}"
   roles:
     - system-updates
