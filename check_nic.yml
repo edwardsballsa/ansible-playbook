@@ -1,6 +1,0 @@
----
-- hosts: wifi-routing.asl04233.asllab
-  roles:
-    - role: check_nic
-      vars:
-        target_interface: "wls16"
