@@ -1,0 +1,37 @@
+---
+- name: Scan WiFi networks and check for target SSID
+  ansible.builtin.command: "nmcli dev wifi rescan && nmcli -t -f SSID dev wifi"
+  register: wifi_scan
+  changed_when: false
+  failed_when: false
+
+- name: Check if target SSID is available
+  ansible.builtin.set_fact:
+    ssid_found: "{{ TARGET_SSID in wifi_scan.stdout }}"
+
+- name: Reboot host if target SSID not found (first attempt)
+  block:
+    - name: Record reboot for missing SSID
+      ansible.builtin.set_fact:
+        recovery_action: "reboot_missing_ssid"
+
+    - name: Reboot host
+      ansible.builtin.include_role:
+        name: reboot_host
+
+    - name: Wait and rescan after reboot (300s)
+      ansible.builtin.command: "sleep 300 && nmcli dev wifi rescan && nmcli -t -f SSID dev wifi"
+      register: wifi_scan_post_reboot
+      changed_when: false
+      failed_when: false
+
+    - name: Check if target SSID available after reboot
+      ansible.builtin.set_fact:
+        ssid_found_after_reboot: "{{ TARGET_SSID in wifi_scan_post_reboot.stdout }}"
+
+    - name: Notify if SSID still missing after reboot
+      ansible.builtin.debug:
+        msg: "CRITICAL: Target SSID '{{ TARGET_SSID }}' NOT FOUND after reboot. Manual intervention required."
+      when: not ssid_found_after_reboot | bool
+      changed_when: false
+  when: not ssid_found | bool

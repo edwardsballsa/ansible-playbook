@@ -1,9 +1,11 @@
 ---
+
 - hosts: wifi-routing.asl04233.asllab
   become: true
   vars:
     target_interface: "wls16"
     TARGET_DNS_IP: "8.8.8.8"
+    TARGET_SSID: "aslguest"
 
   tasks:
     - name: 1. Perform initial ping test
@@ -15,7 +17,12 @@
         initial_ping_failed: "{{ is_ping_failed }}"
         recovery_action: "none"
 
-    - name: 2. Check interface status and try to enable
+    - name: 2. Check WiFi network availability (aslguest) if ping failed
+      ansible.builtin.include_role:
+        name: wifi_network_scan
+      when: is_ping_failed | bool
+
+    - name: 3. Check interface status and try to enable
       ansible.builtin.include_role:
         name: check_nic
       when: is_ping_failed | bool
@@ -25,17 +32,17 @@
         recovery_action: "interface_reset"
       when: is_ping_failed | bool
 
-    - name: 3. Re-verify ping after potential interface fix
+    - name: 4. Re-verify ping after potential interface fix
       ansible.builtin.include_role:
         name: ping_google_dns
       when: is_ping_failed | bool
 
-    - name: Record reboot attempted
+    - name: Record reboot attempted (for ping failure)
       ansible.builtin.set_fact:
-        recovery_action: "reboot"
+        recovery_action: "reboot_ping_failure"
       when: is_ping_failed | bool
 
-    - name: 4. Final reboot check
+    - name: 5. Final reboot check (for ping failure)
       ansible.builtin.include_role:
         name: reboot_host
       when: is_ping_failed | bool
@@ -54,4 +61,7 @@
           recovery_action={{ recovery_action | default('none') }}
           target_interface={{ target_interface }}
           target_ip={{ TARGET_DNS_IP }}
+          target_ssid={{ TARGET_SSID }}
+          ssid_found_initial={{ ssid_found | default('not_checked') }}
+          ssid_found_after_reboot={{ ssid_found_after_reboot | default('not_checked') }}
       changed_when: false
