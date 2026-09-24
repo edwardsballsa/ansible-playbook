@@ -1,0 +1,30 @@
+---
+# Windows specific updates
+- name: Check for pending updates (Windows) - CHECK MODE
+  ansible.windows.win_updates:
+    category_names: ['SecurityUpdates', 'CriticalUpdates', 'Updates']
+    state: searched
+  register: windows_update_search
+  when:
+    - ansible_network_os is not defined
+    - not run_update | bool
+  tags: [check]
+
+- name: Install updates (Windows) - APPLY MODE
+  ansible.windows.win_updates:
+    category_names: ['SecurityUpdates', 'CriticalUpdates', 'Updates']
+    state: installed
+  register: windows_upgrade_result
+  when:
+    - ansible_network_os is not defined
+    - run_update | bool
+  tags: [apply]
+
+- name: Check if reboot required (Windows)
+  ansible.windows.win_reg_stat:
+    path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired
+  register: windows_reboot_check
+  when:
+    - ansible_network_os is not defined
+    - run_update | bool or reboot_check | bool
+  tags: [reboot_check]

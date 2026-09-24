@@ -1,0 +1,32 @@
+---
+# Alpine specific updates
+- name: Check for upgradable packages (Alpine) - CHECK MODE
+  ansible.builtin.command: apk list --upgradable 2>/dev/null
+  register: alpine_upgradable
+  changed_when: false
+  failed_when: false
+  when:
+    - ansible_network_os is not defined
+    - not run_update | bool
+  tags: [check]
+
+- name: Update package cache and upgrade (Alpine) - APPLY MODE
+  community.general.apk:
+    update_cache: yes
+    upgrade: yes
+  register: alpine_upgrade_result
+  when:
+    - ansible_network_os is not defined
+    - run_update | bool
+  tags: [apply]
+
+- name: Check if reboot required (Alpine) - check for kernel/initramfs changes
+  ansible.builtin.command: |
+    if [ -f /var/run/reboot-required ]; then exit 0; else exit 1; fi
+  register: alpine_reboot_check
+  changed_when: false
+  failed_when: false
+  when:
+    - ansible_network_os is not defined
+    - run_update | bool or reboot_check | bool
+  tags: [reboot_check]

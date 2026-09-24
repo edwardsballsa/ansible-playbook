@@ -1,0 +1,32 @@
+---
+# RedHat/CentOS/Rocky/Alma specific updates
+- name: Check for upgradable packages (RedHat) - CHECK MODE
+  ansible.builtin.command: dnf check-update 2>/dev/null || true
+  register: redhat_upgradable
+  changed_when: false
+  failed_when: false
+  when:
+    - ansible_network_os is not defined
+    - not run_update | bool
+  tags: [check]
+
+- name: Update package cache (RedHat) - APPLY MODE
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+    update_cache: yes
+  register: redhat_upgrade_result
+  when:
+    - ansible_network_os is not defined
+    - run_update | bool
+  tags: [apply]
+
+- name: Check if reboot required (RedHat)
+  ansible.builtin.command: needs-restarting -r
+  register: redhat_reboot_check
+  changed_when: false
+  failed_when: false
+  when:
+    - ansible_network_os is not defined
+    - run_update | bool or reboot_check | bool
+  tags: [reboot_check]

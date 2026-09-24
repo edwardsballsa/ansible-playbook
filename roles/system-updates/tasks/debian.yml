@@ -1,0 +1,52 @@
+---
+# Debian/Ubuntu specific updates
+- name: Gather package facts (Debian)
+  ansible.builtin.package_facts:
+    manager: auto
+  when: ansible_network_os is not defined
+  tags: [always]
+
+- name: Update apt cache (Debian) - CHECK MODE
+  ansible.builtin.apt:
+    update_cache: yes
+  when:
+    - ansible_network_os is not defined
+    - not run_update | bool
+  tags: [check]
+
+- name: Check for upgradable packages (Debian) - CHECK MODE
+  ansible.builtin.shell: apt-get -s upgrade | grep '^Inst'
+  register: debian_upgradable
+  changed_when: false
+  failed_when: false
+  when:
+    - ansible_network_os is not defined
+    - not run_update | bool
+  tags: [check]
+
+- name: Update apt cache (Debian) - APPLY MODE
+  ansible.builtin.apt:
+    update_cache: yes
+  when:
+    - ansible_network_os is not defined
+    - run_update | bool
+  tags: [apply]
+
+- name: Upgrade all packages (Debian) - APPLY MODE
+  ansible.builtin.apt:
+    upgrade: dist
+  register: debian_upgrade_result
+  when:
+    - ansible_network_os is not defined
+    - run_update | bool
+  tags: [apply]
+
+- name: Check if reboot required (Debian)
+  ansible.builtin.command: needs-restarting -r
+  register: debian_reboot_check
+  changed_when: false
+  failed_when: false
+  when:
+    - ansible_network_os is not defined
+    - run_update | bool or reboot_check | bool
+  tags: [reboot_check]

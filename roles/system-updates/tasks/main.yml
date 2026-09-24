@@ -1,165 +1,22 @@
 ---
-# System Updates Role
-# Supports: Debian/Ubuntu, Alpine, RHEL/CentOS/Rocky/Alma, Windows
-# Variables:
-#   run_update: false (check mode) | true (apply updates)
-#   reboot_check: true (check if reboot needed after updates)
+# System Updates Role - Main Entry Point
+# This role delegates tasks to OS-specific files based on ansible_os_family
 
-- name: Gather package facts (Debian)
-  ansible.builtin.package_facts:
-    manager: auto
-  when: ansible_os_family == "Debian" and ansible_network_os is not defined
-  tags: [always]
+- name: Include Debian updates
+  ansible.builtin.import_tasks: debian.yml
+  when: ansible_os_family == "Debian"
 
-- name: Update apt cache (Debian) - CHECK MODE
-  ansible.builtin.apt:
-    update_cache: yes
-  when:
-    - ansible_os_family == "Debian"
-    - ansible_network_os is not defined
-    - not run_update | bool
-  tags: [check]
+- name: Include Alpine updates
+  ansible.builtin.import_tasks: alpine.yml
+  when: ansible_os_family == "Alpine"
 
-- name: Check for upgradable packages (Debian) - CHECK MODE
-  ansible.builtin.shell: apt-get -s upgrade | grep '^Inst'
-  register: debian_upgradable
-  changed_when: false
-  failed_when: false
-  when:
-    - ansible_os_family == "Debian"
-    - ansible_network_os is not defined
-    - not run_update | bool
-  tags: [check]
+- name: Include RedHat updates
+  ansible.builtin.import_tasks: redhat.yml
+  when: ansible_os_family == "RedHat"
 
-- name: Update apt cache (Debian) - APPLY MODE
-  ansible.builtin.apt:
-    update_cache: yes
-  when:
-    - ansible_os_family == "Debian"
-    - ansible_network_os is not defined
-    - run_update | bool
-  tags: [apply]
-
-- name: Upgrade all packages (Debian) - APPLY MODE
-  ansible.builtin.apt:
-    upgrade: dist
-  register: debian_upgrade_result
-  when:
-    - ansible_os_family == "Debian"
-    - ansible_network_os is not defined
-    - run_update | bool
-  tags: [apply]
-
-- name: Check if reboot required (Debian)
-  ansible.builtin.command: needs-restarting -r
-  register: debian_reboot_check
-  changed_when: false
-  failed_when: false
-  when:
-    - ansible_os_family == "Debian"
-    - ansible_network_os is not defined
-    - run_update | bool or reboot_check | bool
-  tags: [reboot_check]
-
-- name: Check for upgradable packages (Alpine) - CHECK MODE
-  ansible.builtin.command: apk list --upgradable 2>/dev/null
-  register: alpine_upgradable
-  changed_when: false
-  failed_when: false
-  when:
-    - ansible_os_family == "Alpine"
-    - ansible_network_os is not defined
-    - not run_update | bool
-  tags: [check]
-
-- name: Update package cache and upgrade (Alpine) - APPLY MODE
-  community.general.apk:
-    update_cache: yes
-    upgrade: yes
-  register: alpine_upgrade_result
-  when:
-    - ansible_os_family == "Alpine"
-    - ansible_network_os is not defined
-    - run_update | bool
-  tags: [apply]
-
-- name: Check if reboot required (Alpine) - check for kernel/initramfs changes
-  ansible.builtin.command: |
-    if [ -f /var/run/reboot-required ]; then exit 0; else exit 1; fi
-  register: alpine_reboot_check
-  changed_when: false
-  failed_when: false
-  when:
-    - ansible_os_family == "Alpine"
-    - ansible_network_os is not defined
-    - run_update | bool or reboot_check | bool
-  tags: [reboot_check]
-
-- name: Check for upgradable packages (RedHat) - CHECK MODE
-  ansible.builtin.command: dnf check-update 2>/dev/null || true
-  register: redhat_upgradable
-  changed_when: false
-  failed_when: false
-  when:
-    - ansible_os_family == "RedHat"
-    - ansible_network_os is not defined
-    - not run_update | bool
-  tags: [check]
-
-- name: Update package cache (RedHat) - APPLY MODE
-  ansible.builtin.dnf:
-    name: "*"
-    state: latest
-    update_cache: yes
-  register: redhat_upgrade_result
-  when:
-    - ansible_os_family == "RedHat"
-    - ansible_network_os is not defined
-    - run_update | bool
-  tags: [apply]
-
-- name: Check if reboot required (RedHat)
-  ansible.builtin.command: needs-restarting -r
-  register: redhat_reboot_check
-  changed_when: false
-  failed_when: false
-  when:
-    - ansible_os_family == "RedHat"
-    - ansible_network_os is not defined
-    - run_update | bool or reboot_check | bool
-  tags: [reboot_check]
-
-- name: Check for pending updates (Windows) - CHECK MODE
-  ansible.windows.win_updates:
-    category_names: ['SecurityUpdates', 'CriticalUpdates', 'Updates']
-    state: searched
-  register: windows_update_search
-  when:
-    - ansible_os_family == "Windows"
-    - ansible_network_os is not defined
-    - not run_update | bool
-  tags: [check]
-
-- name: Install updates (Windows) - APPLY MODE
-  ansible.windows.win_updates:
-    category_names: ['SecurityUpdates', 'CriticalUpdates', 'Updates']
-    state: installed
-  register: windows_upgrade_result
-  when:
-    - ansible_os_family == "Windows"
-    - ansible_network_os is not defined
-    - run_update | bool
-  tags: [apply]
-
-- name: Check if reboot required (Windows)
-  ansible.windows.win_reg_stat:
-    path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired
-  register: windows_reboot_check
-  when:
-    - ansible_os_family == "Windows"
-    - ansible_network_os is not defined
-    - run_update | bool or reboot_check | bool
-  tags: [reboot_check]
+- name: Include Windows updates
+  ansible.builtin.import_tasks: windows.yml
+  when: ansible_os_family == "Windows"
 
 - name: Compile upgrade summary (CHECK MODE)
   ansible.builtin.set_fact:
