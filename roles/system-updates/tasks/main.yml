@@ -11,6 +11,15 @@
   when: ansible_os_family == "Debian" and ansible_network_os is not defined
   tags: [always]
 
+- name: Update apt cache (Debian) - CHECK MODE
+  ansible.builtin.apt:
+    update_cache: yes
+  when:
+    - ansible_os_family == "Debian"
+    - ansible_network_os is not defined
+    - not run_update | bool
+  tags: [check]
+
 - name: Check for upgradable packages (Debian) - CHECK MODE
   ansible.builtin.command: apt list --upgradable 2>/dev/null
   register: debian_upgradable
