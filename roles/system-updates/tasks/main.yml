@@ -21,7 +21,7 @@
   tags: [check]
 
 - name: Check for upgradable packages (Debian) - CHECK MODE
-  ansible.builtin.command: apt list --upgradable 2>/dev/null
+  ansible.builtin.shell: apt-get -s upgrade | grep '^Inst'
   register: debian_upgradable
   changed_when: false
   failed_when: false
