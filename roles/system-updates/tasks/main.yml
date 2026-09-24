@@ -165,9 +165,9 @@
   ansible.builtin.set_fact:
     upgrade_summary: |
       {{ ansible_facts.hostname | default(inventory_hostname) }} ({{ ansible_os_family }}):
-      {% if ansible_os_family == "Debian" %}{{ debian_upgradable.stdout | default('No upgradable packages') }}
-      {% elif ansible_os_family == "Alpine" %}{{ alpine_upgradable.stdout | default('No upgradable packages') }}
-      {% elif ansible_os_family == "RedHat" %}{{ redhat_upgradable.stdout | default('No upgradable packages') }}
+      {% if ansible_os_family == "Debian" %}{{ debian_upgradable.stdout | replace('Listing...', '') | trim | default('No upgradable packages', true) }}
+      {% elif ansible_os_family == "Alpine" %}{{ alpine_upgradable.stdout | replace('Listing...', '') | trim | default('No upgradable packages', true) }}
+      {% elif ansible_os_family == "RedHat" %}{{ redhat_upgradable.stdout | trim | default('No upgradable packages', true) }}
       {% elif ansible_os_family == "Windows" %}{{ windows_update_search.updates | length | string }} updates available
       {% else %}Unsupported OS family{% endif %}
   when: not run_update | bool
