@@ -1,31 +1,48 @@
 ---
 # System Updates Role - Main Entry Point
-# This role delegates tasks to OS-specific files based on ansible_os_family
+# This role delegates tasks to OS-specific files based on ansible_facts.os_family
 
 - name: Include Debian updates
   ansible.builtin.import_tasks: debian.yml
-  when: ansible_os_family == "Debian"
+  when: ansible_facts.os_family == "Debian"
 
 - name: Include Alpine updates
   ansible.builtin.import_tasks: alpine.yml
-  when: ansible_os_family == "Alpine"
+  when: ansible_facts.os_family == "Alpine"
 
 - name: Include RedHat updates
   ansible.builtin.import_tasks: redhat.yml
-  when: ansible_os_family == "RedHat"
+  when: ansible_facts.os_family == "RedHat"
 
 - name: Include Windows updates
   ansible.builtin.import_tasks: windows.yml
-  when: ansible_os_family == "Windows"
+  when: ansible_facts.os_family == "Windows"
+
+- name: Compile Final Status Report
+  ansible.builtin.set_fact:
+    final_status_report: |
+      Status: {% if run_update | bool %}
+      {% if debian_upgrade_result is defined and debian_upgrade_result.changed %}UPDATED_SUCCESSFULLY{% elif redhat_upgrade_result is defined and redhat_upgrade_result.changed %}UPDATED_SUCCESSFULLY{% elif alpine_upgrade_result is defined and alpine_upgrade_result.changed %}UPDATED_SUCCESSFULLY{% elif windows_upgrade_result is defined and windows_upgrade_result.changed %}UPDATED_SUCCESSFULLY{% else %}NO_CHANGES_NEEDED{% endif %}
+      {% else %}
+      {% if debian_upgradable.stdout is defined and debian_upgradable.stdout | trim != '' and debian_upgradable.stdout | replace('Listing...', '') | trim != '' %}UPDATES_AVAILABLE{% elif alpine_upgradable.stdout is defined and alpine_upgradable.stdout | trim != '' and alpine_upgradable.stdout | replace('Listing...', '') | trim != '' %}UPDATES_AVAILABLE{% elif redhat_upgradable.stdout is defined and redhat_upgradable.stdout | trim != '' %}UPDATES_AVAILABLE{% elif windows_update_search.updates is defined and windows_update_search.updates | length > 0 %}UPDATES_AVAILABLE{% else %}ALREADY_UP_TO_DATE{% endif %}
+      {% endif %}
+  when: true
+  tags: [summary]
+
+- name: Final Status Output
+  ansible.builtin.debug:
+    msg: "FINAL_RESULT: {{ ansible_facts.hostname | default(inventory_hostname) }} -> {{ final_status_report | trim }}"
+  when: final_status_report is defined
+  tags: [summary]
 
 - name: Compile upgrade summary (CHECK MODE)
   ansible.builtin.set_fact:
     upgrade_summary: |
-      {{ ansible_facts.hostname | default(inventory_hostname) }} ({{ ansible_os_family }}):
-      {% if ansible_os_family == "Debian" %}{{ debian_upgradable.stdout | replace('Listing...', '') | trim | default('No upgradable packages', true) }}
-      {% elif ansible_os_family == "Alpine" %}{{ alpine_upgradable.stdout | replace('Listing...', '') | trim | default('No upgradable packages', true) }}
-      {% elif ansible_os_family == "RedHat" %}{{ redhat_upgradable.stdout | trim | default('No upgradable packages', true) }}
-      {% elif ansible_os_family == "Windows" %}{{ windows_update_search.updates | length | string }} updates available
+      {{ ansible_facts.hostname | default(inventory_hostname) }} ({{ ansible_facts.os_family }}):
+      {% if ansible_facts.os_family == "Debian" %}{{ debian_upgradable.stdout | replace('Listing...', '') | trim | default('No upgradable packages', true) }}
+      {% elif ansible_facts.os_family == "Alpine" %}{{ alpine_upgradable.stdout | replace('Listing...', '') | trim | default('No upgradable packages', true) }}
+      {% elif ansible_facts.os_family == "RedHat" %}{{ redhat_upgradable.stdout | trim | default('No upgradable packages', true) }}
+      {% elif ansible_facts.os_family == "Windows" %}{{ windows_update_search.updates | length | string }} updates available
       {% else %}Unsupported OS family{% endif %}
   when: not run_update | bool
   tags: [check]
@@ -33,11 +50,11 @@
 - name: Compile upgrade result summary (APPLY MODE)
   ansible.builtin.set_fact:
     upgrade_summary: |
-      {{ ansible_facts.hostname | default(inventory_hostname) }} ({{ ansible_os_family }}):
-      {% if ansible_os_family == "Debian" %}{{ debian_upgrade_result.changed | ternary('Packages upgraded', 'No packages upgraded') }}
-      {% elif ansible_os_family == "Alpine" %}{{ alpine_upgrade_result.changed | ternary('Packages upgraded', 'No packages upgraded') }}
-      {% elif ansible_os_family == "RedHat" %}{{ redhat_upgrade_result.changed | ternary('Packages upgraded', 'No packages upgraded') }}
-      {% elif ansible_os_family == "Windows" %}{{ windows_upgrade_result.updates | length | string }} updates installed
+      {{ ansible_facts.hostname | default(inventory_hostname) }} ({{ ansible_facts.os_family }}):
+      {% if ansible_facts.os_family == "Debian" %}{{ debian_upgrade_result.changed | ternary('Packages upgraded', 'No packages upgraded') }}
+      {% elif ansible_facts.os_family == "Alpine" %}{{ alpine_upgrade_result.changed | ternary('Packages upgraded', 'No packages upgraded') }}
+      {% elif ansible_facts.os_family == "RedHat" %}{{ redhat_upgrade_result.changed | ternary('Packages upgraded', 'No packages upgraded') }}
+      {% elif ansible_facts.os_family == "Windows" %}{{ windows_upgrade_result.updates | length | string }} updates installed
       {% else %}Unsupported OS family{% endif %}
   when: run_update | bool
   tags: [apply]
@@ -45,10 +62,10 @@
 - name: Compile reboot status
   ansible.builtin.set_fact:
     reboot_required: >
-      {% if ansible_os_family == "Debian" %}{{ debian_reboot_check.rc == 0 }}
-      {% elif ansible_os_family == "Alpine" %}{{ alpine_reboot_check.rc == 0 }}
-      {% elif ansible_os_family == "RedHat" %}{{ redhat_reboot_check.rc == 0 }}
-      {% elif ansible_os_family == "Windows" %}{{ windows_reboot_check.exists | default(false) }}
+      {% if ansible_facts.os_family == "Debian" %}{{ debian_reboot_check.rc == 0 }}
+      {% elif ansible_facts.os_family == "Alpine" %}{{ alpine_reboot_check.rc == 0 }}
+      {% elif ansible_facts.os_family == "RedHat" %}{{ redhat_reboot_check.rc == 0 }}
+      {% elif ansible_facts.os_family == "Windows" %}{{ windows_reboot_check.exists | default(false) }}
       {% else %}false{% endif %}
   when: run_update | bool or reboot_check | bool
   tags: [reboot_check]
