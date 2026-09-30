@@ -8,7 +8,7 @@
 - name: Gather package facts (Debian)
   ansible.builtin.package_facts:
     manager: auto
-  when: ansible_os_family == "Debian" and ansible_network_os is not defined
+  when: ansible_facts.os_family == "Debian" and ansible_network_os is not defined
   tags: [always]
 
 - name: Check for upgradable packages (Debian) - CHECK MODE
@@ -17,7 +17,7 @@
   changed_when: false
   failed_when: false
   when:
-    - ansible_os_family == "Debian"
+    - ansible_facts.os_family == "Debian"
     - ansible_network_os is not defined
     - not run_update | bool
   tags: [check]
@@ -26,7 +26,7 @@
   ansible.builtin.apt:
     update_cache: yes
   when:
-    - ansible_os_family == "Debian"
+    - ansible_facts.os_family == "Debian"
     - ansible_network_os is not defined
     - run_update | bool
   tags: [apply]
@@ -36,7 +36,7 @@
     upgrade: dist
   register: debian_upgrade_result
   when:
-    - ansible_os_family == "Debian"
+    - ansible_facts.os_family == "Debian"
     - ansible_network_os is not defined
     - run_update | bool
   tags: [apply]
@@ -47,7 +47,7 @@
   changed_when: false
   failed_when: false
   when:
-    - ansible_os_family == "Debian"
+    - ansible_facts.os_family == "Debian"
     - ansible_network_os is not defined
     - run_update | bool or reboot_check | bool
   tags: [reboot_check]
@@ -58,7 +58,7 @@
   changed_when: false
   failed_when: false
   when:
-    - ansible_os_family == "Alpine"
+    - ansible_facts.os_family == "Alpine"
     - ansible_network_os is not defined
     - not run_update | bool
   tags: [check]
@@ -69,7 +69,7 @@
     upgrade: yes
   register: alpine_upgrade_result
   when:
-    - ansible_os_family == "Alpine"
+    - ansible_facts.os_family == "Alpine"
     - ansible_network_os is not defined
     - run_update | bool
   tags: [apply]
@@ -81,7 +81,7 @@
   changed_when: false
   failed_when: false
   when:
-    - ansible_os_family == "Alpine"
+    - ansible_facts.os_family == "Alpine"
     - ansible_network_os is not defined
     - run_update | bool or reboot_check | bool
   tags: [reboot_check]
@@ -92,7 +92,7 @@
   changed_when: false
   failed_when: false
   when:
-    - ansible_os_family == "RedHat"
+    - ansible_facts.os_family == "RedHat"
     - ansible_network_os is not defined
     - not run_update | bool
   tags: [check]
@@ -104,7 +104,7 @@
     update_cache: yes
   register: redhat_upgrade_result
   when:
-    - ansible_os_family == "RedHat"
+    - ansible_facts.os_family == "RedHat"
     - ansible_network_os is not defined
     - run_update | bool
   tags: [apply]
@@ -115,7 +115,7 @@
   changed_when: false
   failed_when: false
   when:
-    - ansible_os_family == "RedHat"
+    - ansible_facts.os_family == "RedHat"
     - ansible_network_os is not defined
     - run_update | bool or reboot_check | bool
   tags: [reboot_check]
@@ -126,7 +126,7 @@
     state: searched
   register: windows_update_search
   when:
-    - ansible_os_family == "Windows"
+    - ansible_facts.os_family == "Windows"
     - ansible_network_os is not defined
     - not run_update | bool
   tags: [check]
@@ -137,7 +137,7 @@
     state: installed
   register: windows_upgrade_result
   when:
-    - ansible_os_family == "Windows"
+    - ansible_facts.os_family == "Windows"
     - ansible_network_os is not defined
     - run_update | bool
   tags: [apply]
@@ -147,7 +147,7 @@
     path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired
   register: windows_reboot_check
   when:
-    - ansible_os_family == "Windows"
+    - ansible_facts.os_family == "Windows"
     - ansible_network_os is not defined
     - run_update | bool or reboot_check | bool
   tags: [reboot_check]
@@ -155,11 +155,11 @@
 - name: Compile upgrade summary (CHECK MODE)
   ansible.builtin.set_fact:
     upgrade_summary: |
-      {{ ansible_facts.hostname | default(inventory_hostname) }} ({{ ansible_os_family }}):
-      {% if ansible_os_family == "Debian" %}{{ debian_upgradable.stdout | default('No upgradable packages') }}
-      {% elif ansible_os_family == "Alpine" %}{{ alpine_upgradable.stdout | default('No upgradable packages') }}
-      {% elif ansible_os_family == "RedHat" %}{{ redhat_upgradable.stdout | default('No upgradable packages') }}
-      {% elif ansible_os_family == "Windows" %}{{ windows_update_search.updates | length | string }} updates available
+      {{ ansible_facts.hostname | default(inventory_hostname) }} ({{ ansible_facts.os_family }}):
+      {% if ansible_facts.os_family == "Debian" %}{{ debian_upgradable.stdout | default('No upgradable packages') }}
+      {% elif ansible_facts.os_family == "Alpine" %}{{ alpine_upgradable.stdout | default('No upgradable packages') }}
+      {% elif ansible_facts.os_family == "RedHat" %}{{ redhat_upgradable.stdout | default('No upgradable packages') }}
+      {% elif ansible_facts.os_family == "Windows" %}{{ windows_update_search.updates | length | string }} updates available
       {% else %}Unsupported OS family{% endif %}
   when: not run_update | bool
   tags: [check]
@@ -167,11 +167,11 @@
 - name: Compile upgrade result summary (APPLY MODE)
   ansible.builtin.set_fact:
     upgrade_summary: |
-      {{ ansible_facts.hostname | default(inventory_hostname) }} ({{ ansible_os_family }}):
-      {% if ansible_os_family == "Debian" %}{{ debian_upgrade_result.changed | ternary('Packages upgraded', 'No packages upgraded') }}
-      {% elif ansible_os_family == "Alpine" %}{{ alpine_upgrade_result.changed | ternary('Packages upgraded', 'No packages upgraded') }}
-      {% elif ansible_os_family == "RedHat" %}{{ redhat_upgrade_result.changed | ternary('Packages upgraded', 'No packages upgraded') }}
-      {% elif ansible_os_family == "Windows" %}{{ windows_upgrade_result.updates | length | string }} updates installed
+      {{ ansible_facts.hostname | default(inventory_hostname) }} ({{ ansible_facts.os_family }}):
+      {% if ansible_facts.os_family == "Debian" %}{{ debian_upgrade_result.changed | ternary('Packages upgraded', 'No packages upgraded') }}
+      {% elif ansible_facts.os_family == "Alpine" %}{{ alpine_upgrade_result.changed | ternary('Packages upgraded', 'No packages upgraded') }}
+      {% elif ansible_facts.os_family == "RedHat" %}{{ redhat_upgrade_result.changed | ternary('Packages upgraded', 'No packages upgraded') }}
+      {% elif ansible_facts.os_family == "Windows" %}{{ windows_upgrade_result.updates | length | string }} updates installed
       {% else %}Unsupported OS family{% endif %}
   when: run_update | bool
   tags: [apply]
@@ -179,10 +179,10 @@
 - name: Compile reboot status
   ansible.builtin.set_fact:
     reboot_required: >
-      {% if ansible_os_family == "Debian" %}{{ debian_reboot_check.rc == 0 }}
-      {% elif ansible_os_family == "Alpine" %}{{ alpine_reboot_check.rc == 0 }}
-      {% elif ansible_os_family == "RedHat" %}{{ redhat_reboot_check.rc == 0 }}
-      {% elif ansible_os_family == "Windows" %}{{ windows_reboot_check.exists | default(false) }}
+      {% if ansible_facts.os_family == "Debian" %}{{ debian_reboot_check.rc == 0 }}
+      {% elif ansible_facts.os_family == "Alpine" %}{{ alpine_reboot_check.rc == 0 }}
+      {% elif ansible_facts.os_family == "RedHat" %}{{ redhat_reboot_check.rc == 0 }}
+      {% elif ansible_facts.os_family == "Windows" %}{{ windows_reboot_check.exists | default(false) }}
       {% else %}false{% endif %}
   when: run_update | bool or reboot_check | bool
   tags: [reboot_check]
