@@ -1,0 +1,8 @@
+---
+- name: Ping Linux hosts (ssh)
+  ansible.builtin.ping:
+  when: ansible_connection == "ssh"
+
+-  name: Ping Windows hosts (winrm)
+   ansible.builtin.win_ping
+   when: ansible_connection == "winrm"
