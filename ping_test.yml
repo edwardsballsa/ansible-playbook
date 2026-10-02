@@ -3,4 +3,4 @@
   hosts: all
   gather_facts: no
   roles:
-    - ping_hosts
+    - ping_check
