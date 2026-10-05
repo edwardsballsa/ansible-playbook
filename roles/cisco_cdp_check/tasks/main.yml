@@ -1,3 +1,4 @@
+---
 - name: Gather CDP neighbors (pre-upgrade)
   when: action == 'pre'
   cisco.ios.ios_facts:
