@@ -1,0 +1,33 @@
+---
+- name: Gather CDP neighbors (pre-upgrade)
+  when: action == 'pre'
+  cisco.ios.ios_facts:
+    gather_subset:
+      - cdp
+  register: cdp_pre_facts
+
+- name: Save CDP data to file (pre-upgrade)
+  when: action == 'pre'
+  copy:
+    content: "{{ cdp_pre_facts.ansible_facts.ansible_net_cdp_neighbors | to_json }}"
+    dest: "/tmp/cdp_pre_{{ inventory_hostname }}.json"
+
+- name: Gather CDP neighbors (post-upgrade)
+  when: action == 'post'
+  cisco.ios.ios_facts:
+    gather_subset:
+      - cdp
+  register: cdp_post_facts
+
+- name: Load pre-upgrade CDP data
+  when: action == 'post'
+  slurp:
+    src: "/tmp/cdp_pre_{{ inventory_hostname }}.json"
+  register: cdp_pre_file
+
+- name: Validate CDP consistency (post-upgrade)
+  when: action == 'post'
+  fail:
+    msg: "CDP neighbors changed after upgrade! Check network topology"
+  when: cdp_post_facts.ansible_facts.ansible_net_cdp_neighbors != 
+        (cdp_pre_file.content | b64decode | from_json)
