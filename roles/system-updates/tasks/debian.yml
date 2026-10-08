@@ -15,7 +15,7 @@
   tags: [check]
 
 - name: Check for upgradable packages (Debian) - CHECK MODE
-  ansible.builtin.shell: apt-get -s upgrade | grep '^Inst'
+  ansible.builtin.shell: apt-get -s dist-upgrade | grep '^Inst'
   register: debian_upgradable
   changed_when: false
   failed_when: false
@@ -33,9 +33,10 @@
   tags: [apply]
 
 - name: Upgrade all packages (Debian) - APPLY MODE
-  ansible.builtin.apt:
-    upgrade: dist
+  ansible.builtin.shell: DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y
   register: debian_upgrade_result
+  changed_when: "'upgraded,' in debian_upgrade_result.stdout or 'newly installed' in debian_upgrade_result.stdout"
+  failed_when: false
   when:
     - ansible_network_os is not defined
     - run_update | bool
