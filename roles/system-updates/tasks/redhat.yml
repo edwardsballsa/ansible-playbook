@@ -1,7 +1,7 @@
----
+--- 
 # RedHat/CentOS/Rocky/Alma specific updates
 - name: Check for upgradable packages (RedHat) - CHECK MODE
-  ansible.builtin.command: dnf check-update 2>/dev/null || true
+  ansible.builtin.command: dnf check-update
   register: redhat_upgradable
   changed_when: false
   failed_when: false
