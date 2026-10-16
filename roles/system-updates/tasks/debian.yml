@@ -33,17 +33,28 @@
   tags: [apply]
 
 - name: Upgrade all packages (Debian) - APPLY MODE
-  ansible.builtin.shell: DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y
+  ansible.builtin.shell: LC_ALL=C DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y
   register: debian_upgrade_result
-  changed_when: "'upgraded,' in debian_upgrade_result.stdout or 'newly installed' in debian_upgrade_result.stdout"
-  failed_when: false
+  failed_when: debian_upgrade_result.rc != 0
+  changed_when:
+    - debian_upgrade_result.rc == 0
+    - "debian_upgrade_result.stdout is search('[1-9][0-9]* upgraded') or debian_upgrade_result.stdout is search('[1-9][0-9]* newly installed')"
   when:
     - ansible_network_os is not defined
     - run_update | bool
   tags: [apply]
 
 - name: Check if reboot required (Debian)
-  ansible.builtin.command: needs-restarting -r
+  ansible.builtin.shell: |
+    if [ -f /var/run/reboot-required ]; then
+      exit 0
+    fi
+    latest_kernel="$(ls -1 /boot/vmlinuz-* 2>/dev/null | sed 's|.*/vmlinuz-||' | sort -V | tail -1)"
+    running_kernel="$(uname -r)"
+    if [ -n "$latest_kernel" ] && [ "$latest_kernel" != "$running_kernel" ]; then
+      exit 0
+    fi
+    exit 1
   register: debian_reboot_check
   changed_when: false
   failed_when: false
