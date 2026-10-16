@@ -1,10 +1,13 @@
 --- 
 # RedHat/CentOS/Rocky/Alma specific updates
 - name: Check for upgradable packages (RedHat) - CHECK MODE
-  ansible.builtin.command: dnf check-update
+  ansible.builtin.command: dnf -q check-update
   register: redhat_upgradable
   changed_when: false
-  failed_when: false
+  # dnf check-update exit codes (man dnf): 0 = no updates, 100 = updates available
+  # (package list printed), 1 = error. Any other rc is a real dnf failure and must
+  # fail loudly instead of being misread as "updates available".
+  failed_when: redhat_upgradable.rc not in [0, 100]
   when:
     - ansible_network_os is not defined
     - not run_update | bool
